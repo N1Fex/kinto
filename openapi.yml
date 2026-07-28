@@ -1,0 +1,1721 @@
+openapi: '3.0.3'
+info:
+  title: Kinto
+  version: '1.0'
+servers:
+  - url: https://localhost:8080/api/v1
+paths:
+  /users:
+    delete:
+      security:
+        - JWT: []
+      tags:
+          - Users
+      description: "Удаляет аккаунт пользователя"
+      responses:
+        '204':
+          description: "Аккаунт успешно удален"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+
+  /users/{user_id}:
+    get:
+      tags:
+        - Users
+      description: "Получение информации о пользователе"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        '200':
+          description: "Пользователь найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        '404':
+          description: "Пользователь с заданным user_id не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"              
+              example:
+                  status: 404
+                  code: "USER_NOT_FOUND"
+                  message: "Пользователь не найден"
+    patch:
+      security:
+        - JWT: []
+      tags:
+        - Users
+      description: "Редактирование профиля текущего пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        description: "Поля профиля для обновления"
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        '200':
+          description: "Профиль обновлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на редактирование чужого профиля"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Пользователь не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /users/{user_id}/posts:
+    get:
+      tags:
+        - Users
+        - Posts
+      description: "Получение постов пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список постов пользователя"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+        '404':
+          description: "Пользователь не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /users/{user_id}/followers:
+    get:
+      tags:
+        - Follows
+      description: "Список подписчиков пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список пользователей, подписанных на данного"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{user_id}/following:
+    get:
+      tags:
+        - Follows
+      description: "Список пользователей, на которых подписан данный пользователь"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список подписок пользователя"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
+  /users/{user_id}/follow:
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Follows
+      description: "Подписаться на пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        '201':
+          description: "Подписка оформлена"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Follow"
+        '400':
+          description: "Нельзя подписаться на самого себя"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+              example:
+                status: 400
+                code: "SELF_FOLLOW_FORBIDDEN"
+                message: "Нельзя подписаться на самого себя"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Пользователь не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '409':
+          description: "Подписка уже оформлена"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+              example:
+                status: 409
+                code: "ALREADY_FOLLOWING"
+                message: "Вы уже подписаны на этого пользователя"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Follows
+      description: "Отписаться от пользователя"
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        '204':
+          description: "Подписка отменена"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Подписка не найдена"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  # ==========================================================
+  # AUTH
+  # ==========================================================
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      description: "Создает нового пользователя"
+      responses:
+        '201':
+          description: "Новый пользователь создан"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        '400':
+          description: "Поля confirm_password и password не совпадают, либо низкая сложность пароля"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"              
+              examples:
+                "Слабый пароль":
+                  value:
+                    status: 400
+                    code: "WEAK_PASSWORD"
+                    message: "Слабая сложность пароля"
+                "Пароли не совпадают":
+                  value:
+                    status: 400
+                    code: "PASSWORD_MISMATCH"
+                    message: "Пароли не совпадают"
+        '409':
+          description: "Почта или логин уже заняты"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+              examples:
+                "Почта занята":
+                  value:
+                    status: 400
+                    code: "EMAIL_ALREADY_EXISTS"
+                    message: "Почта уже существует"
+                "Логин занят":
+                  value:
+                    status: 400
+                    code: "LOGIN_ALREADY_EXISTS"
+                    message: "Логин занят"
+
+      requestBody:
+        description: "Данные для регистрации"
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - display_name
+                - password
+                - confirm_password
+              properties:
+                username:
+                  type: string
+                email:
+                  type: "string"
+                  format: "email"
+                display_name:
+                  type: "string"
+                password:
+                  type: "string"
+                  format: "password"
+                confirm_password:
+                  type: "string"
+                  format: "password"
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      description: "Аутентификация пользователя по логину/почте и паролю"
+      requestBody:
+        description: "Данные для входа"
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+              properties:
+                login:
+                  type: string
+                  description: "Логин или email"
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: "Успешная аутентификация"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        '401':
+          description: "Неверный логин или пароль"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+              example:
+                status: 401
+                code: "INVALID_CREDENTIALS"
+                message: "Неверный логин или пароль"
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      description: "Обновление пары токенов по refresh_token"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: "Токены обновлены"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+        '401':
+          description: "Refresh токен недействителен или истек"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /auth/logout:
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Auth
+      description: "Завершение текущей сессии (инвалидация refresh_token)"
+      responses:
+        '204':
+          description: "Сессия завершена"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+    
+  /auth/logout-others:
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Auth
+      description: "Завершение всех сессий, кроме текущей"
+      responses:
+        '204':
+          description: "Сессии завершены"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+  # ==========================================================
+  # POSTS
+  # ==========================================================
+
+  /posts:
+    get:
+      tags:
+        - Posts
+      description: "Лента постов (по умолчанию — публичные и посты подписок текущего пользователя)"
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список постов"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Posts
+      description: "Создание нового поста"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostCreate"
+      responses:
+        '201':
+          description: "Пост создан"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        '400':
+          description: "Некорректные данные поста"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+
+  /posts/{post_id}:
+    get:
+      tags:
+        - Posts
+      description: "Получение поста по идентификатору"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        '200':
+          description: "Пост найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        '404':
+          description: "Пост не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+              example:
+                status: 404
+                code: "POST_NOT_FOUND"
+                message: "Пост не найден"
+    patch:
+      security:
+        - JWT: []
+      tags:
+        - Posts
+      description: "Редактирование поста (доступно только автору)"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PostUpdate"
+      responses:
+        '200':
+          description: "Пост обновлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на редактирование чужого поста"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Пост не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Posts
+      description: "Удаление поста (доступно автору или модератору)"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        '204':
+          description: "Пост удален"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на удаление чужого поста"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Пост не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /posts/{post_id}/like:
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Likes
+      description: "Поставить лайк посту"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        '201':
+          description: "Лайк поставлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Like"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Пост не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '409':
+          description: "Лайк уже поставлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Likes
+      description: "Убрать лайк с поста"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      responses:
+        '204':
+          description: "Лайк удален"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Лайк не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  # ==========================================================
+  # COMMENTS
+  # ==========================================================
+
+  /posts/{post_id}/comments:
+    get:
+      tags:
+        - Comments
+      description: "Получение комментариев к посту"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список комментариев"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+        '404':
+          description: "Пост не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Comments
+      description: "Добавление комментария к посту"
+      parameters:
+        - $ref: "#/components/parameters/PostId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentCreate"
+      responses:
+        '201':
+          description: "Комментарий создан"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Пост или родительский комментарий не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /comments/{comment_id}:
+    get:
+      tags:
+        - Comments
+      description: "Получение комментария по идентификатору"
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        '200':
+          description: "Комментарий найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+        '404':
+          description: "Комментарий не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Comments
+      description: "Удаление комментария (доступно автору или модератору)"
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        '204':
+          description: "Комментарий удален"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на удаление чужого комментария"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Комментарий не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /comments/{comment_id}/like:
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Likes
+      description: "Поставить лайк комментарию"
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        '201':
+          description: "Лайк поставлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Like"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Комментарий не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '409':
+          description: "Лайк уже поставлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Likes
+      description: "Убрать лайк с комментария"
+      parameters:
+        - $ref: "#/components/parameters/CommentId"
+      responses:
+        '204':
+          description: "Лайк удален"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Лайк не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  # ==========================================================
+  # NOTIFICATIONS
+  # ==========================================================
+
+  /notifications:
+    get:
+      security:
+        - JWT: []
+      tags:
+        - Notifications
+      description: "Получение уведомлений текущего пользователя"
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: is_read
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: "Фильтр по статусу прочтения"
+      responses:
+        '200':
+          description: "Список уведомлений"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{notification_id}/read:
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Notifications
+      description: "Отметить уведомление прочитанным"
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: "Уведомление отмечено прочитанным"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '404':
+          description: "Уведомление не найдено"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  # ==========================================================
+  # CHATS
+  # ==========================================================
+
+  /chats:
+    get:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Список чатов текущего пользователя"
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список чатов"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chat"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Создание чата (личного, группового или канала)"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatCreate"
+      responses:
+        '201':
+          description: "Чат создан"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chat"
+        '400':
+          description: "Некорректные данные чата"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+
+  /chats/{chat_id}:
+    get:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Получение информации о чате"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+      responses:
+        '200':
+          description: "Чат найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chat"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Пользователь не состоит в чате"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Чат не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    patch:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Изменение параметров чата (доступно создателю/админу)"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                avatar:
+                  type: string
+      responses:
+        '200':
+          description: "Чат обновлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chat"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на изменение чата"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Чат не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Удаление чата (доступно создателю)"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+      responses:
+        '204':
+          description: "Чат удален"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на удаление чата"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Чат не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /chats/{chat_id}/members:
+    get:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Список участников чата"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+      responses:
+        '200':
+          description: "Список участников"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMember"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Пользователь не состоит в чате"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Добавление участника в групповой чат или канал"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+              properties:
+                user_id:
+                  type: integer
+                  format: int64
+      responses:
+        '201':
+          description: "Участник добавлен"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMember"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на добавление участников"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Чат или пользователь не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '409':
+          description: "Пользователь уже состоит в чате"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /chats/{chat_id}/members/{user_id}:
+    patch:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Изменение роли участника чата"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  $ref: "#/components/schemas/ChatMemberRole"
+      responses:
+        '200':
+          description: "Роль участника обновлена"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMember"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на изменение роли"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Участник не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Chats
+      description: "Удаление участника из чата (или выход из чата самим участником)"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        '204':
+          description: "Участник удален из чата"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на удаление участника"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Участник не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  # ==========================================================
+  # MESSAGES
+  # ==========================================================
+
+  /chats/{chat_id}/messages:
+    get:
+      security:
+        - JWT: []
+      tags:
+        - Messages
+      description: "Получение истории сообщений чата"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: "Список сообщений"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Пользователь не состоит в чате"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    post:
+      security:
+        - JWT: []
+      tags:
+        - Messages
+      description: "Отправка сообщения в чат"
+      parameters:
+        - $ref: "#/components/parameters/ChatId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageCreate"
+      responses:
+        '201':
+          description: "Сообщение отправлено"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Пользователь не состоит в чате"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Чат не найден"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+  /messages/{message_id}:
+    patch:
+      security:
+        - JWT: []
+      tags:
+        - Messages
+      description: "Редактирование сообщения (доступно автору)"
+      parameters:
+        - $ref: "#/components/parameters/MessageId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+      responses:
+        '200':
+          description: "Сообщение отредактировано"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на редактирование чужого сообщения"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Сообщение не найдено"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+    delete:
+      security:
+        - JWT: []
+      tags:
+        - Messages
+      description: "Удаление сообщения (доступно автору или модератору чата)"
+      parameters:
+        - $ref: "#/components/parameters/MessageId"
+      responses:
+        '204':
+          description: "Сообщение удалено"
+        '401':
+          $ref: "#/components/responses/Unauthorized"
+        '403':
+          description: "Нет прав на удаление чужого сообщения"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+        '404':
+          description: "Сообщение не найдено"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralError"
+
+components:
+  parameters:
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    PostId:
+      name: post_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    CommentId:
+      name: comment_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    ChatId:
+      name: chat_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    MessageId:
+      name: message_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 20
+        maximum: 100
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        default: 0
+  securitySchemes:
+    JWT:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT Authorization header using Bearer scheme. Example: Bearer {token}"
+  
+  responses:
+    Unauthorized:
+      description: Требуется авторизация
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GeneralError"
+            example:
+              status: 401
+              code: "UNAUTHORIZED"
+              message: "Вы не авторизованы"
+               
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Token is missing or expired"
+
+  schemas:
+    GeneralError:
+      type: object
+      properties:
+          status:
+            type: number
+            format: int32
+          code:
+            type: string
+          message:
+            type: string
+          timestamp:
+            type: string
+            format: date-time
+
+    # ==========================================================
+    # ENUMS
+    # ==========================================================
+
+    UserStatus:
+      type: string
+      enum: [active, banned, deleted]
+
+    UserRole:
+      type: string
+      enum: [user, moderator, admin, superadmin]
+
+    PostVisibility:
+      type: string
+      enum: [private, public, followers]
+
+    LikeTargetType:
+      type: string
+      enum: [post, comment]
+
+    ChatType:
+      type: string
+      enum: [private, group, channel]
+
+    ChatMemberRole:
+      type: string
+      enum: [user, admin, moderator, creator]
+
+    # ==========================================================
+    # USER
+    # ==========================================================
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        display_name:
+          type: string
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        role:
+          $ref: '#/components/schemas/UserRole'
+        bio:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+        password:
+          type: string
+          writeOnly: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - display_name
+        - status
+        - role
+        - password
+        - created_at
+
+    # ==========================================================
+    # AUTH
+    # ==========================================================
+
+    AuthTokens:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      required:
+        - access_token
+        - refresh_token
+        - user
+
+    UserUpdate:
+      type: object
+      properties:
+        display_name:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+
+    # ==========================================================
+    # POST
+    # ==========================================================
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        author_id:
+          type: integer
+          format: int64
+        text:
+          type: string
+          nullable: true
+        visibility:
+          $ref: '#/components/schemas/PostVisibility'
+        likes_count:
+          type: integer
+          format: int32
+          default: 0
+        comments_count:
+          type: integer
+          format: int32
+          default: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - author_id
+        - visibility
+        - likes_count
+        - comments_count
+        - created_at
+
+    PostCreate:
+      type: object
+      required:
+        - visibility
+      properties:
+        text:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/PostVisibility'
+
+    PostUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+        visibility:
+          $ref: '#/components/schemas/PostVisibility'
+
+    # ==========================================================
+    # NOTIFICATION
+    # ==========================================================
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        content:
+          type: string
+        is_read:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - content
+        - is_read
+        - created_at
+
+    # ==========================================================
+    # COMMENT
+    # ==========================================================
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        post_id:
+          type: integer
+          format: int64
+        author_id:
+          type: integer
+          format: int64
+        parent_comment_id:
+          type: integer
+          format: int64
+          nullable: true
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - post_id
+        - author_id
+        - message
+        - created_at
+
+    CommentCreate:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+        parent_comment_id:
+          type: integer
+          format: int64
+          nullable: true
+
+    # ==========================================================
+    # LIKE
+    # ==========================================================
+
+    Like:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        target_id:
+          type: integer
+          format: int64
+        target_type:
+          $ref: '#/components/schemas/LikeTargetType'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - target_id
+        - target_type
+        - created_at
+
+    # ==========================================================
+    # FOLLOW
+    # ==========================================================
+
+    Follow:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        follower_id:
+          type: integer
+          format: int64
+        following_id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - follower_id
+        - following_id
+        - created_at
+
+    # ==========================================================
+    # CHAT
+    # ==========================================================
+
+    Chat:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        type:
+          $ref: '#/components/schemas/ChatType'
+        avatar:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        created_by:
+          type: integer
+          format: int64
+          nullable: true
+      required:
+        - id
+        - type
+        - created_at
+
+    ChatCreate:
+      type: object
+      required:
+        - type
+        - member_ids
+      properties:
+        type:
+          $ref: '#/components/schemas/ChatType'
+        title:
+          type: string
+          description: "Обязательно для group и channel"
+        avatar:
+          type: string
+          nullable: true
+        member_ids:
+          type: array
+          description: "Идентификаторы приглашаемых участников (для private — ровно один)"
+          items:
+            type: integer
+            format: int64
+
+    # ==========================================================
+    # CHAT MEMBER
+    # ==========================================================
+
+    ChatMember:
+      type: object
+      properties:
+        chat_id:
+          type: integer
+          format: int64
+        user_id:
+          type: integer
+          format: int64
+        role:
+          $ref: '#/components/schemas/ChatMemberRole'
+        joined_at:
+          type: string
+          format: date-time
+        last_read_message_id:
+          type: integer
+          format: int64
+          nullable: true
+      required:
+        - chat_id
+        - user_id
+        - role
+        - joined_at
+
+    # ==========================================================
+    # MESSAGE
+    # ==========================================================
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        chat_id:
+          type: integer
+          format: int64
+        seq:
+          type: integer
+          format: int32
+          default: 0
+        sender_id:
+          type: integer
+          format: int64
+        text:
+          type: string
+          nullable: true
+        reply_to_message_id:
+          type: integer
+          format: int64
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        edited_at:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - chat_id
+        - seq
+        - sender_id
+        - created_at
+
+    MessageCreate:
+      type: object
+      properties:
+        text:
+          type: string
+        reply_to_message_id:
+          type: integer
+          format: int64
+          nullable: true
