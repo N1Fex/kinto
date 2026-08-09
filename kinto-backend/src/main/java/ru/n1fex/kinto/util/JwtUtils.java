@@ -6,14 +6,16 @@ import lombok.NoArgsConstructor;
 import ru.n1fex.kinto.dto.JwtAuthentication;
 import ru.n1fex.kinto.entity.UserRole;
 
+import java.util.UUID;
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class JwtUtils {
 
-    public static JwtAuthentication generate(Claims claims) {
+    public static JwtAuthentication generateAuthentication(Claims claims) {
         final JwtAuthentication jwtAuthentication = new JwtAuthentication();
-        jwtAuthentication.setRole(claims.get("role", UserRole.class));
-        jwtAuthentication.setName(claims.get("name", String.class));
-        jwtAuthentication.setEmail(claims.getSubject());
+        jwtAuthentication.setRole(UserRole.valueOf(claims.get("role", String.class)));
+        jwtAuthentication.setSid(UUID.fromString(claims.get("sid", String.class)));
+        jwtAuthentication.setUserId(Long.valueOf(claims.getSubject()));
         return jwtAuthentication;
     }
 }

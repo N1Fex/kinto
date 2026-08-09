@@ -9,15 +9,15 @@ import ru.n1fex.kinto.entity.UserRole;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
 public class JwtAuthentication implements Authentication {
 
     private boolean authenticated;
-    private String email;
-    private String username;
-    private String name;
+    private Long userId;
+    private UUID sid;
     private UserRole role;
 
 
@@ -38,7 +38,7 @@ public class JwtAuthentication implements Authentication {
 
     @Override
     public @Nullable Object getPrincipal() {
-        return this.email;
+        return this.userId;
     }
 
     @Override
@@ -53,6 +53,6 @@ public class JwtAuthentication implements Authentication {
 
     @Override
     public String getName() {
-        return this.name;
+        return this.sid.toString();
     }
 }

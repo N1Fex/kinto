@@ -13,7 +13,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import ru.n1fex.kinto.dto.ErrorResponse;
 import ru.n1fex.kinto.dto.JwtAuthentication;
-import ru.n1fex.kinto.service.JwtProvider;
+import ru.n1fex.kinto.service.SessionService;
+import ru.n1fex.kinto.util.JwtProvider;
 import ru.n1fex.kinto.util.JwtUtils;
 import tools.jackson.databind.ObjectMapper;
 
@@ -26,6 +27,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private final JwtProvider jwtProvider;
+    private final SessionService sessionService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest servletRequest, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -39,27 +41,19 @@ public class JwtFilter extends OncePerRequestFilter {
         if (jwtProvider.validateAccessToken(token)) {
 
             final Claims claims = jwtProvider.getAccessClaims(token);
-            final JwtAuthentication jwtInfoToken = JwtUtils.generate(claims);
-            jwtInfoToken.setAuthenticated(true);
-            SecurityContextHolder.getContext().setAuthentication(jwtInfoToken);
+            final JwtAuthentication jwtInfoToken = JwtUtils.generateAuthentication(claims);
 
-            filterChain.doFilter(servletRequest, response);
+            if (!sessionService.refreshExists(jwtInfoToken.getSid())) {
+                accessDenyRequest(servletRequest, response, "Войдите в аккаунт");
+            } else {
+                jwtInfoToken.setAuthenticated(true);
+                SecurityContextHolder.getContext().setAuthentication(jwtInfoToken);
+
+                filterChain.doFilter(servletRequest, response);
+            }
+
         } else {
-            ObjectMapper mapper = new ObjectMapper();
-            ErrorResponse er = new ErrorResponse(
-                    HttpStatus.UNAUTHORIZED.value(),
-                    HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-                    "Ошибка обработки JWT токена");
-
-
-            response.resetBuffer();
-            response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-
-            PrintWriter pw = response.getWriter();
-            pw.write(mapper.writeValueAsString(er));
-            pw.flush();
+            accessDenyRequest(servletRequest, response, "Ошибка обработки JWT токена");
         }
 
     }
@@ -83,5 +77,23 @@ public class JwtFilter extends OncePerRequestFilter {
             return bearer.substring(7);
         }
         return null;
+    }
+
+    private void accessDenyRequest(HttpServletRequest request, HttpServletResponse response, String message) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        ErrorResponse er = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase(),
+                message);
+
+
+        response.resetBuffer();
+        response.setStatus(HttpStatus.UNAUTHORIZED.value());
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        PrintWriter pw = response.getWriter();
+        pw.write(mapper.writeValueAsString(er));
+        pw.flush();
     }
 }

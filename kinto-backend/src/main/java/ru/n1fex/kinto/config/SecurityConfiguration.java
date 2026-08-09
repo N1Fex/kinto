@@ -12,7 +12,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import ru.n1fex.kinto.filter.JwtFilter;
-import ru.n1fex.kinto.service.JwtProvider;
+import ru.n1fex.kinto.service.SessionService;
+import ru.n1fex.kinto.util.JwtProvider;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -23,8 +24,8 @@ import static org.springframework.security.config.Customizer.withDefaults;
 public class SecurityConfiguration {
 
     @Bean
-    public JwtFilter jwtFilter(JwtProvider jwtProvider) {
-        return new JwtFilter(jwtProvider);
+    public JwtFilter jwtFilter(JwtProvider jwtProvider, SessionService sessionService) {
+        return new JwtFilter(jwtProvider, sessionService);
     }
 
     @Bean
@@ -40,6 +41,7 @@ public class SecurityConfiguration {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/sessions").authenticated()
                         .requestMatchers("/auth/*").permitAll()
                         .anyRequest().authenticated()
                 )
