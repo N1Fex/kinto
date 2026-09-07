@@ -26,6 +26,21 @@ services:
       minio-init:
         condition: service_completed_successfully
         
+  redis:
+    image: redis:7.4.10-bookworm
+    container_name: redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # frontend:
   #   build:
@@ -60,7 +75,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:4.2.4-management-alpine
-    container_name: rabbitmq
+    container_name: kinto-rabbitmq
     hostname: rabbitmq
     restart: unless-stopped
     environment:
@@ -113,4 +128,5 @@ services:
 volumes:
   minio-data:
   rabbitmq-data:
+  redisdata:
   db-data:
