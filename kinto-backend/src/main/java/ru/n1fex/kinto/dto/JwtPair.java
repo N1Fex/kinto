@@ -5,9 +5,8 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class JwtResponse {
+public class JwtPair {
 
-    private final String type = "Bearer";
     private String accessToken;
     private String refreshToken;
 

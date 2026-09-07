@@ -270,21 +270,21 @@ paths:
               type: object
               required:
                 - username
-                - display_name
+                - displayName
                 - password
-                - confirm_password
+                - confirmPassword
               properties:
                 username:
                   type: string
                 email:
                   type: "string"
                   format: "email"
-                display_name:
+                displayName:
                   type: "string"
                 password:
                   type: "string"
                   format: "password"
-                confirm_password:
+                confirmPassword:
                   type: "string"
                   format: "password"
 

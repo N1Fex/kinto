@@ -25,6 +25,9 @@ dependencies {
     implementation("org.hibernate.validator:hibernate-validator:9.1.2.Final")
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
 
+    implementation("nl.basjes.parse.useragent:yauaa:7.27.0")
+    implementation("com.maxmind.geoip2:geoip2:4.2.0")
+
     implementation("io.jsonwebtoken:jjwt-api:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
