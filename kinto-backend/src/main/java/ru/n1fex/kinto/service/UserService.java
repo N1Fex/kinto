@@ -9,4 +9,8 @@ import ru.n1fex.kinto.repository.UserRepository;
 public class UserService {
     private final UserRepository userRepository;
 
+    public Boolean isUsernameAvailable(String username) {
+        return userRepository.getUserByUsername(username).isEmpty();
+    }
+
 }

@@ -1,13 +1,14 @@
 package ru.n1fex.kinto.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ru.n1fex.kinto.dto.ActiveSessionsDto;
 import ru.n1fex.kinto.dto.JwtAuthentication;
-import ru.n1fex.kinto.dto.SessionDto;
+import ru.n1fex.kinto.service.CookieService;
 import ru.n1fex.kinto.service.SessionService;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -16,11 +17,16 @@ import java.util.UUID;
 public class SessionController {
 
     private final SessionService sessionService;
+    private final CookieService cookieService;
 
     @GetMapping
-    public ResponseEntity<List<SessionDto>> getSessions(JwtAuthentication authentication) {
+    public ResponseEntity<ActiveSessionsDto> getSessions(JwtAuthentication authentication) {
+
         return ResponseEntity.ok(
-                sessionService.getSessions(authentication.getUserId())
+                new ActiveSessionsDto(
+                        authentication.getSid().toString(),
+                        sessionService.getSessions(authentication.getUserId())
+                )
         );
     }
 
@@ -33,7 +39,9 @@ public class SessionController {
     @DeleteMapping("/current")
     public ResponseEntity<Void> deleteCurrentSession(JwtAuthentication auth) {
         sessionService.logout(auth.getUserId(), auth.getSid());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, cookieService.clearCookie(CookieService.REFRESH_TOKEN_COOKIE, "/auth").toString())
+                .build();
     }
 
     @DeleteMapping("/others")

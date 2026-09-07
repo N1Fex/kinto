@@ -1,5 +1,6 @@
 package ru.n1fex.kinto.service;
 
+import co.elastic.clients.util.Pair;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,16 +40,16 @@ public class AuthService {
     @Value("${verification.email.ttl}")
     private Duration verificationDuration;
 
-    private JwtResponse createNewSession(User user) {
+    private JwtPair createNewSession(User user, SessionMetadata metadata) {
         UUID jti = UUID.randomUUID();
         String refreshToken = jwtProvider.generateRefreshToken(user, jti);
         String accessToken = jwtProvider.generateAccessToken(user, jti);
-        sessionService.createNewSession(user.getId(), jti, jwtProvider.getRefreshTtl());
-        return new JwtResponse(accessToken, refreshToken);
+        sessionService.createNewSession(user.getId(), jti, jwtProvider.getRefreshTtl(), metadata);
+        return new JwtPair(accessToken, refreshToken);
 
     }
 
-    public JwtResponse login(String login, String password) {
+    public Pair<JwtPair, User> login(String login, String password, SessionMetadata metadata) {
         Optional<User> userOpt = userRepository.getUserByUsernameOrEmail(login, login);
         if (userOpt.isEmpty()) {
             throw new UserNotFoundException("Пользователь не найден!");
@@ -60,7 +61,7 @@ public class AuthService {
                 throw new InvalidCredentialsException("Неверные данные для входа!");
             }
 
-            return createNewSession(user);
+            return Pair.of(createNewSession(user, metadata), user);
         }
 
         if (user.getStatus() == UserStatus.UNVERIFIED) {
@@ -103,7 +104,7 @@ public class AuthService {
         );
     }
 
-    public JwtResponse verifyEmail(String email, String verificationCode) {
+    public Pair<JwtPair, User> verifyEmail(String email, String verificationCode, SessionMetadata metadata) {
         User user = userRepository.getUserByEmail(email).orElseThrow(UserNotFoundException::new);
 
         Boolean verified = verificationService.verify(
@@ -117,15 +118,17 @@ public class AuthService {
         user.setStatus(UserStatus.ACTIVE);
         userRepository.save(user);
 
-        return createNewSession(user);
+        return Pair.of(createNewSession(user, metadata), user);
     }
 
-    public JwtResponse refreshTokens(RefreshJwtRequest refreshRequest) {
-        String token = refreshRequest.getRefreshToken();
-        if (!jwtProvider.validateRefreshToken(token)) {
+    public Pair<JwtPair, User> refreshTokens(String refreshToken, SessionMetadata metadata) {
+        if (refreshToken == null) {
+            throw new InvalidCredentialsException("Refresh токен не был передан!");
+        }
+        if (!jwtProvider.validateRefreshToken(refreshToken)) {
             throw new InvalidCredentialsException("Невалидный refresh token");
         }
-        Claims claims = jwtProvider.getRefreshClaims(token);
+        Claims claims = jwtProvider.getRefreshClaims(refreshToken);
         UUID jti = UUID.fromString(claims.get("jti").toString());
 
         if (!sessionService.refreshExists(jti)) {
@@ -139,6 +142,6 @@ public class AuthService {
 
         sessionService.removeRefresh(userId, jti);
 
-        return createNewSession(user);
+        return Pair.of(createNewSession(user, metadata), user);
     }
 }

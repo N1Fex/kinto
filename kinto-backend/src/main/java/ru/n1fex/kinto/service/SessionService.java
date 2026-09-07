@@ -3,6 +3,7 @@ package ru.n1fex.kinto.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.n1fex.kinto.dto.SessionDto;
+import ru.n1fex.kinto.dto.SessionMetadata;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -36,16 +37,15 @@ public class SessionService {
     }
 
 
-    // Должен еще принимать метаданные от браузер - device, country, browser, os, ip
-    public SessionDto createNewSession(Long userId, UUID sid, Duration sessionTtl/* todo , String device, String ip, ..., */) {
+    public SessionDto createNewSession(Long userId, UUID sid, Duration sessionTtl, SessionMetadata metadata) {
         SessionDto session = new SessionDto(
                 userId,
                 sid,
-                "",
-                "",
-                "",
-                "",
-                "",
+                metadata.device(),
+                metadata.country(),
+                metadata.browser(),
+                metadata.os(),
+                metadata.ip(),
                 Instant.now(),
                 Instant.now().plus(sessionTtl)
         );
