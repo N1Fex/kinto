@@ -1,0 +1,78 @@
+:root,
+[data-theme='light'] {
+	color-scheme: light;
+	--color-bg: #f6f6f8;
+	--color-surface: #ffffff;
+	--color-surface-raised: #ffffff;
+	--color-surface-hover: #f1f1f5;
+	--color-text: #1c1b22;
+	--color-text-muted: #676574;
+	--color-text-subtle: #92909d;
+	--color-text-inverse: #ffffff;
+	--color-border: #e5e3ea;
+	--color-border-strong: #d5d2dc;
+	--color-primary: #6254c7;
+	--color-primary-hover: #5548b4;
+	--color-primary-active: #483c9d;
+	--color-primary-soft: #eeecfb;
+	--color-accent: #cc5b4b;
+	--color-accent-soft: #fceae7;
+	--color-success: #187a58;
+	--color-success-soft: #e3f5ed;
+	--color-warning: #a96813;
+	--color-warning-soft: #fff2df;
+	--color-danger: #bd4141;
+	--color-danger-soft: #fbe9e9;
+	--color-info: #3575a8;
+	--color-info-soft: #e7f2fa;
+	--logo-line: #6254cb;
+	--logo-c1: #483c9d;
+	--logo-c2: #8f80e8;
+	--shadow-card: 0 1px 2px rgb(28 27 34 / 4%);
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 14px;
+}
+
+[data-theme='dark'] {
+	color-scheme: dark;
+	--color-bg: #17161b;
+	--color-surface: #201f25;
+	--color-surface-raised: #29282f;
+	--color-surface-hover: #2c2b33;
+	--color-text: #f2f0f5;
+	--color-text-muted: #b9b5c1;
+	--color-text-subtle: #8c8995;
+	--color-text-inverse: #17161b;
+	--color-border: #35333c;
+	--color-border-strong: #494650;
+	--color-primary: #a89cff;
+	--color-primary-hover: #b9b0ff;
+	--color-primary-active: #9589f2;
+	--color-primary-soft: #302d4a;
+	--color-accent: #f18572;
+	--color-accent-soft: #472924;
+	--color-success: #4fc99a;
+	--color-success-soft: #1e4036;
+	--color-warning: #f1b85b;
+	--color-warning-soft: #48371e;
+	--color-danger: #f08080;
+	--color-danger-soft: #482729;
+	--color-info: #75b4e4;
+	--color-info-soft: #203c53;
+	--logo-line: #7a6fd8;
+	--logo-c1: #6254c7;
+	--logo-c2: #a89cff;
+	--shadow-card: 0 1px 2px rgb(0 0 0 / 18%);
+}
+
+@theme inline {
+	--color-page: var(--color-bg);
+	--color-card: var(--color-surface);
+	--color-card-raised: var(--color-surface-raised);
+	--color-app: var(--color-text);
+	--color-muted: var(--color-text-muted);
+	--color-brand: var(--color-primary);
+	--color-brand-hover: var(--color-primary-hover);
+	--color-line: var(--color-border);
+}
